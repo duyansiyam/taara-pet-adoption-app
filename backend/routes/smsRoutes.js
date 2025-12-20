@@ -3,6 +3,45 @@ const router = express.Router();
 const smsService = require('../services/smsService');
 
 
+router.post('/', async (req, res) => {
+  try {
+    console.log('📥 Full request body:', JSON.stringify(req.body, null, 2));
+    
+    const { ownerPhone, petName, adopterName, adopterPhone } = req.body;
+    
+    console.log('🔍 Owner Phone (raw):', ownerPhone);
+    console.log('🔍 Owner Phone type:', typeof ownerPhone);
+    
+    if (!ownerPhone || ownerPhone === 'undefined' || ownerPhone === 'null') {
+      console.error('❌ Invalid owner phone number!');
+      return res.status(400).json({
+        success: false,
+        message: 'Owner phone number is missing or invalid'
+      });
+    }
+
+    const smsResult = await smsService.sendAdoptionNotification({
+      ownerPhone: ownerPhone,
+      petName: petName,
+      adopterName: adopterName,
+      adopterContact: adopterPhone,
+      adoptionId: `ADT-${Date.now()}`
+    });
+    
+    console.log('✅ SMS Result:', smsResult);
+    
+    res.status(201).json({
+      success: true,
+      smsResult: smsResult
+    });
+    
+  } catch (error) {
+    console.error('❌ Error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+
 router.post('/adoption-notification', async (req, res) => {
   try {
     console.log('📥 Received adoption notification request:', req.body);
@@ -15,7 +54,6 @@ router.post('/adoption-notification', async (req, res) => {
         message: 'Missing required fields: ownerPhone, petName, adopterName'
       });
     }
-
 
     const result = await smsService.sendAdoptionNotification({
       ownerPhone,
@@ -31,8 +69,7 @@ router.post('/adoption-notification', async (req, res) => {
     console.error('❌ SMS Route Error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to send SMS notification',
-      error: process.env.NODE_ENV === 'development' ? error.toString() : undefined
+      message: error.message || 'Failed to send SMS notification'
     });
   }
 });
@@ -46,7 +83,7 @@ router.post('/approval-notification', async (req, res) => {
     if (!adopterPhone || !petName || !ownerName) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: adopterPhone, petName, ownerName'
+        message: 'Missing required fields'
       });
     }
 
@@ -68,7 +105,6 @@ router.post('/approval-notification', async (req, res) => {
   }
 });
 
-
 router.post('/rejection-notification', async (req, res) => {
   try {
     console.log('📥 Received rejection notification request:', req.body);
@@ -78,7 +114,7 @@ router.post('/rejection-notification', async (req, res) => {
     if (!adopterPhone || !petName) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: adopterPhone, petName'
+        message: 'Missing required fields'
       });
     }
 
@@ -97,33 +133,6 @@ router.post('/rejection-notification', async (req, res) => {
       message: error.message
     });
   }
-});
-
-
-router.get('/balance', async (req, res) => {
-  try {
-    const balance = await smsService.checkBalance();
-    res.json(balance);
-  } catch (error) {
-    console.error('❌ Balance Check Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-});
-
-
-router.get('/test', (req, res) => {
-  const iprogConfig = require('../config/iprog.config');
-  
-  res.json({
-    configured: iprogConfig.isConfigured,
-    senderId: iprogConfig.senderId,
-    apiKey: iprogConfig.apiKey ? 'Set ✅' : 'Missing ❌',
-    mode: iprogConfig.isConfigured ? 'LIVE' : 'MOCK',
-    provider: 'iProg SMS'
-  });
 });
 
 module.exports = router;

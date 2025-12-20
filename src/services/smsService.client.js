@@ -29,9 +29,7 @@ const smsService = {
     }
   },
 
-  /**
-   * Send approval notification SMS
-   */
+ 
   async sendApprovalNotification(data) {
     try {
       console.log('📤 Sending approval notification...', data);
